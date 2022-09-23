@@ -1,59 +1,22 @@
 import UIKit
 
-public class GenericCell<T>: UICollectionViewCell, CollectionCellBlueprint {
-    public func setup(model: Model) {
-        // TODO:
-    }
-    
-    public typealias Model = T
-}
-
-public class GenericDatasource<T>: BaseCollectionViewDatasouce {
-    public init() {}
-    
-    var datasource: [T] = []
-    
-    public typealias Model = T
-    
-    public func updateDatasource(datasource: [T]) {
-        self.datasource = datasource
-    }
-    
-    public func getModel(indexPath: IndexPath) -> Model? {
-        return datasource.indices.contains(indexPath.row) ? datasource[indexPath.row] : nil
-    }
-}
-
-public protocol CollectionCellBlueprint {
-    associatedtype Model
-    func setup(model: Model)
-}
-
-public protocol BaseCollectionViewDatasouce: AnyObject {
-    associatedtype Model
-    func getModel(indexPath: IndexPath) -> Model?
-}
-
-
-private extension UIView {
-    static var identifier: String {
-        return String(describing: self)
-    }
-}
-
-public typealias AsyncVoidCallBack = () async -> Void
-
-public class UIUnderlyingCollectionView<T: CollectionCellBlueprint,
-                                        Datasource: BaseCollectionViewDatasouce>: UICollectionView,
-                                                                               UICollectionViewDelegate,
-                                                                               UICollectionViewDataSource,
-                                                                               UICollectionViewDelegateFlowLayout,
-                                                                               UIScrollViewDelegate
-where T: UICollectionViewCell, Datasource.Model== T.Model {
+public class UIUnderlyingCollectionView: UICollectionView,
+                                         UICollectionViewDelegate,
+                                         UICollectionViewDataSource,
+                                         UICollectionViewDelegateFlowLayout,
+                                         UICollectionViewDataSourcePrefetching,
+                                         UIScrollViewDelegate {
     
     // MARK: - public
-    public weak var collectionDatasource: Datasource?
-    public var onRefresh: AsyncVoidCallBack?
+    public var data: [GenericSection] = []
+    public var onRefresh: (() async -> Void)?
+    public var onReachEnd: (() async -> Void)?
+    public var calculateSizeForCell: ((UICollectionView, IndexPath) -> CGSize)?
+    public var buildCellForItem: ((UICollectionView, IndexPath) -> UICollectionViewCell)?
+    public var buildHeader: ((UICollectionView, IndexPath) -> UICollectionReusableView)?
+    public var buildFooter: ((UICollectionView, IndexPath) -> UICollectionReusableView)?
+
+    public var onChangeScrollDirection: ((GenericScrollDirection) -> Void)?
     
     // MARK: - Private
     private let layout: UICollectionViewFlowLayout = {
@@ -66,11 +29,13 @@ where T: UICollectionViewCell, Datasource.Model== T.Model {
     private var defaultOffset: CGPoint?
     private let thisRefreshControl = UIRefreshControl()
     
-    private var numberOfColumns: Int = 2
+    var spacing: CGFloat = 20
+    var edgeInset = UIEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
+    
+    private var isLoadingMore = false
     
     // MARK: - Init
-    public init(numberOfColumns: Int) {
-        self.numberOfColumns = numberOfColumns
+    public init() {
         super.init(frame: .zero, collectionViewLayout: self.layout)
         setupCollectionView()
     }
@@ -86,45 +51,79 @@ where T: UICollectionViewCell, Datasource.Model== T.Model {
         self.backgroundColor = .clear
         self.delegate = self
         self.dataSource = self
-        self.register(T.self,
-                      forCellWithReuseIdentifier: T.identifier)
+        self.prefetchDataSource = self
         self.alwaysBounceVertical = true
         
-        self.refreshControl = thisRefreshControl
-        thisRefreshControl.addTarget(self, action: #selector(didPullToRefresh(_:)), for: .valueChanged)
+        if onRefresh != nil {
+            self.refreshControl = thisRefreshControl
+            thisRefreshControl.addTarget(self, action: #selector(didPullToRefresh(_:)), for: .valueChanged)
+        }
     }
     
-    @objc private func didPullToRefresh(_ sender: Any) async {
-        await onRefresh?()
-        self.thisRefreshControl.endRefreshing()
+    @objc private func didPullToRefresh(_ sender: Any) {
+        Task {
+            await onRefresh?()
+            self.thisRefreshControl.endRefreshing()
+        }
     }
     
     // MARK: - Delegate functions
-    public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 5
+    public func numberOfSections(in collectionView: UICollectionView) -> Int {
+        return data.count
     }
     
-    public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
-        return 0
+    public func collectionView(_ collectionView: UICollectionView,
+                               numberOfItemsInSection section: Int) -> Int {
+        return data[safe: section]?.data.count ?? 0
     }
     
-    public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.frame.width,
-                      height: 250)
+    public func collectionView(_ collectionView: UICollectionView,
+                               layout collectionViewLayout: UICollectionViewLayout,
+                               sizeForItemAt indexPath: IndexPath) -> CGSize {
+        return calculateSizeForCell?(collectionView, indexPath) ?? .zero
     }
     
     public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: T.identifier,
-                                                            for: indexPath) as? T else {
-            return UICollectionViewCell()
-        }
-        guard let model = collectionDatasource?.getModel(indexPath: indexPath) else {
-            return cell
-        }
-        cell.setup(model: model)
-        return cell
+        return buildCellForItem?(collectionView, indexPath) ?? UICollectionViewCell()
     }
     
+    public func collectionView(_ collectionView: UICollectionView,
+                               viewForSupplementaryElementOfKind kind: String,
+                               at indexPath: IndexPath) -> UICollectionReusableView {
+        switch kind {
+        case UICollectionView.elementKindSectionHeader:
+            return buildHeader?(collectionView, indexPath) ?? UICollectionReusableView()
+        case UICollectionView.elementKindSectionFooter:
+            return buildFooter?(collectionView, indexPath) ?? UICollectionReusableView()
+        default:
+            return UICollectionReusableView()
+        }
+    }
+    
+    public func collectionView(_ collectionView: UICollectionView,
+                               layout collectionViewLayout: UICollectionViewLayout,
+                               insetForSectionAt section: Int) -> UIEdgeInsets {
+        return edgeInset
+    }
+
+    public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
+        return spacing
+    }
+
+    public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
+        return spacing
+    }
+    
+    public func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        if indexPaths.map({ $0.item }).contains(collectionView.numberOfItems(inSection: collectionView.numberOfSections - 1) - 5) && !isLoadingMore {
+            Task {
+                isLoadingMore = true
+                await onReachEnd?()
+                isLoadingMore = false
+            }
+        }
+    }
+
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         self.defaultOffset = scrollView.contentOffset
     }
@@ -135,11 +134,19 @@ where T: UICollectionViewCell, Datasource.Model== T.Model {
         }
         
         let currentOffset = scrollView.contentOffset
+                
+        if currentOffset.y + scrollView.height >= scrollView.contentSize.height {
+            return
+        }
+        
+        if currentOffset.y <= 0 {
+            return
+        }
         
         if currentOffset.y > defaultOffset.y {
-            print(" \(#function) isScrollingDown")
+            onChangeScrollDirection?(.up)
         } else {
-            print(" \(#function) isScrollingUp")
+            onChangeScrollDirection?(.down)
         }
     }
     
