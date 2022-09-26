@@ -51,6 +51,7 @@ public struct UnderlyingTableView: UIViewRepresentable {
     }
     
     public func updateUIView(_ uiView: UIViewType, context: Context) {
+        if data == uiView.data { return }
         uiView.data = data
         uiView.reloadData()
     }

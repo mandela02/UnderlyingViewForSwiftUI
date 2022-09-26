@@ -14,8 +14,17 @@ public class UIUnderlyingCollectionView: UICollectionView,
     public var calculateSizeForCell: ((UICollectionView, IndexPath) -> CGSize)?
     public var buildCellForItem: ((UICollectionView, IndexPath) -> UICollectionViewCell)?
     public var buildHeader: ((UICollectionView, IndexPath) -> UICollectionReusableView)?
+    public var sizeForHeader: ((UICollectionView, Int) -> CGSize)?
+    public var sizeForFooter: ((UICollectionView, Int) -> CGSize)?
     public var buildFooter: ((UICollectionView, IndexPath) -> UICollectionReusableView)?
+    public var edgeInset: ((Int) -> UIEdgeInsets)?
+    public var spacing: ((Int) -> CGFloat)?
+    
+    public var willDisplay: ((UICollectionView, UICollectionViewCell, IndexPath ) -> Void)?
+    public var didEndDisplay: ((UICollectionView, UICollectionViewCell, IndexPath ) -> Void)?
 
+    public var didSelectItem: ((UICollectionView, IndexPath) -> Void)?
+    
     public var onChangeScrollDirection: ((GenericScrollDirection) -> Void)?
     
     // MARK: - Private
@@ -28,9 +37,6 @@ public class UIUnderlyingCollectionView: UICollectionView,
     
     private var defaultOffset: CGPoint?
     private let thisRefreshControl = UIRefreshControl()
-    
-    var spacing: CGFloat = 20
-    var edgeInset = UIEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
     
     private var isLoadingMore = false
     
@@ -54,10 +60,8 @@ public class UIUnderlyingCollectionView: UICollectionView,
         self.prefetchDataSource = self
         self.alwaysBounceVertical = true
         
-        if onRefresh != nil {
-            self.refreshControl = thisRefreshControl
-            thisRefreshControl.addTarget(self, action: #selector(didPullToRefresh(_:)), for: .valueChanged)
-        }
+        self.refreshControl = thisRefreshControl
+        thisRefreshControl.addTarget(self, action: #selector(didPullToRefresh(_:)), for: .valueChanged)
     }
     
     @objc private func didPullToRefresh(_ sender: Any) {
@@ -103,15 +107,25 @@ public class UIUnderlyingCollectionView: UICollectionView,
     public func collectionView(_ collectionView: UICollectionView,
                                layout collectionViewLayout: UICollectionViewLayout,
                                insetForSectionAt section: Int) -> UIEdgeInsets {
-        return edgeInset
+        return edgeInset?(section) ?? UIEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
     }
 
     public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
-        return spacing
+        return spacing?(section) ?? 20
     }
 
     public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
-        return spacing
+        return spacing?(section) ?? 20
+    }
+    
+    public func collectionView(_ collectionView: UICollectionView,
+                               layout collectionViewLayout: UICollectionViewLayout,
+                               referenceSizeForHeaderInSection section: Int) -> CGSize {
+        sizeForHeader?(collectionView, section) ?? .zero
+    }
+    
+    public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForFooterInSection section: Int) -> CGSize {
+        sizeForFooter?(collectionView, section) ?? .zero
     }
     
     public func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
@@ -122,6 +136,20 @@ public class UIUnderlyingCollectionView: UICollectionView,
                 isLoadingMore = false
             }
         }
+    }
+    
+    public func collectionView(_ collectionView: UICollectionView,
+                               willDisplay cell: UICollectionViewCell,
+                               forItemAt indexPath: IndexPath) {
+        willDisplay?(collectionView, cell, indexPath)
+    }
+    
+    public func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        didEndDisplay?(collectionView, cell, indexPath)
+    }
+    
+    public func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        didSelectItem?(collectionView, indexPath)
     }
 
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
