@@ -14,6 +14,8 @@ UnderlyingCollectionView(data: datasource)
 ```
 
 and you good to go. 
+##### Requirements
+- iOS 13.0+
 
 ##### You can use a `SwiftUI` view in `UICollectionViewCell`
 
