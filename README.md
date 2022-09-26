@@ -1,5 +1,8 @@
 # UnderlyingViewForSwiftUI
 
+##### Requirements
+- iOS 13.0+
+
 To use this package, first, create a datasource
 
 ```
@@ -14,8 +17,6 @@ UnderlyingCollectionView(data: datasource)
 ```
 
 and you good to go. 
-##### Requirements
-- iOS 13.0+
 
 ##### You can use a `SwiftUI` view in `UICollectionViewCell`
 
