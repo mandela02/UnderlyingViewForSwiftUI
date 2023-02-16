@@ -51,6 +51,7 @@ public struct UnderlyingCollectionView: UIViewRepresentable {
 
     @Binding
     private var scrollDirection: GenericScrollDirection
+    
     private let onRefesh: AsyncVoidCallback?
     private let onReachEnd: AsyncVoidCallback?
     private let extraSetting: ((UICollectionView) -> Void)?
