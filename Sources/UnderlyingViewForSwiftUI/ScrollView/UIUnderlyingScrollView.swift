@@ -17,7 +17,7 @@ public struct UnderlyingScrollView<Content: View>: UIViewControllerRepresentable
     private var content: () -> Content
     private var axis: DirectionX
     private var hideScrollIndicators: Bool
-    private let onRefresh: ((UIRefreshControl) -> Void)?
+    private let onRefresh: AsyncVoidCallback?
     private let onReachBottom: (() -> Void)?
     
     @Binding
@@ -26,7 +26,7 @@ public struct UnderlyingScrollView<Content: View>: UIViewControllerRepresentable
     public init(axis: DirectionX = .vertical,
                 hideScrollIndicators: Bool = false,
                 shouldScrollToBottom: Binding<Bool> = .constant(false),
-                onRefresh: ((UIRefreshControl) -> Void)? = nil,
+                onRefresh: AsyncVoidCallback? = nil,
                 onReachBottom: (() -> Void)? = nil,
                 @ViewBuilder content: @escaping () -> Content) {
         
@@ -64,10 +64,10 @@ public struct UnderlyingScrollView<Content: View>: UIViewControllerRepresentable
     }
     
     public class Coordinator: NSObject, LegacyScrollViewDelegate {
-        let onRefresh: ((UIRefreshControl) -> Void)?
+        let onRefresh: AsyncVoidCallback?
         let onReachBottom: (() -> Void)?
         
-        internal init(onRefresh: ((UIRefreshControl) -> Void)?,
+        internal init(onRefresh: AsyncVoidCallback?,
                       onReachBottom: (() -> Void)?) {
             self.onRefresh = onRefresh
             self.onReachBottom = onReachBottom
@@ -86,7 +86,10 @@ public struct UnderlyingScrollView<Content: View>: UIViewControllerRepresentable
         }
         
         func didRefresh(sender: UIRefreshControl) {
-            onRefresh?(sender)
+            Task { @MainActor in
+                await onRefresh?()
+                sender.endRefreshing()
+            }
         }
     }
 }
