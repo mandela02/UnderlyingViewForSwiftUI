@@ -102,7 +102,7 @@ public struct UnderlyingCollectionView: UIViewRepresentable {
     
     public func updateUIView(_ uiView: UIViewType, context: Context) {
         if frame != .zero && frame != uiView.frame {
-            uiView.frame = frame
+            uiView.bounds = frame
         }
         
         if reloadTrigger {
