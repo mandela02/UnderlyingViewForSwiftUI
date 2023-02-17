@@ -12,7 +12,7 @@ public typealias AsyncVoidCallback = () async -> Void
 public struct UnderlyingCollectionView: UIViewRepresentable {
     
     public init(data: [any GenericSection] = [],
-                layout: UICollectionViewLayout? = nil,
+                frame: CGRect = .zero,
                 scrollDirection: Binding<GenericScrollDirection> = .constant(.down),
                 reloadTrigger: Binding<Bool> = .constant(false),
                 onRefesh: AsyncVoidCallback? = nil,
@@ -44,16 +44,17 @@ public struct UnderlyingCollectionView: UIViewRepresentable {
         self.sizeForFooter = sizeForFooter
         self.edgeInset = edgeInset
         self.spacing = spacing
+        self.frame = frame
         
         self.didSelectItem = didSelectItem
-        self.layout = layout
     }
     
     public typealias UIViewType = UIUnderlyingCollectionView
             
     private let data: [any GenericSection]
-    private let layout: UICollectionViewLayout?
 
+    private let frame: CGRect
+    
     @Binding
     private var scrollDirection: GenericScrollDirection
     
@@ -100,6 +101,10 @@ public struct UnderlyingCollectionView: UIViewRepresentable {
     }
     
     public func updateUIView(_ uiView: UIViewType, context: Context) {
+        if frame != .zero && frame != uiView.frame {
+            uiView.frame = frame
+        }
+        
         if reloadTrigger {
             uiView.reloadData()
             DispatchQueue.main.async {
