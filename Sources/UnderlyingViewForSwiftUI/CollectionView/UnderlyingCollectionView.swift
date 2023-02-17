@@ -115,5 +115,6 @@ public struct UnderlyingCollectionView: UIViewRepresentable {
 
         uiView.data = data
         uiView.reloadData()
+        uiView.layoutIfNeeded()
     }
 }
