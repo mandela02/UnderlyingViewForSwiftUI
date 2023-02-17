@@ -14,11 +14,15 @@ public class UIUnderlyingTableView: UITableView,
                                     UITableViewDataSourcePrefetching,
                                     UIScrollViewDelegate {
     // MARK: - public
-    public var data: [GenericSection] = []
+    public var data: [any GenericSection] = []
     public var onRefresh: (() async -> Void)?
     public var onReachEnd: (() async -> Void)?
     public var calcuteSizeForCell: ((UITableView, IndexPath) -> CGFloat)?
     public var buildCellForRow: ((UITableView, IndexPath) -> UITableViewCell)?
+    public var buildHeaderView: ((UITableView, Int) -> UIView?)?
+    public var headerHeight: ((UITableView, Int) -> CGFloat)?
+    
+    public var didSelectRowAt: ((UITableView, IndexPath) -> Void)?
 
     public var onChangeScrollDirection: ((GenericScrollDirection) -> Void)?
     
@@ -37,7 +41,7 @@ public class UIUnderlyingTableView: UITableView,
     
     // MARK: - Init
     public init() {
-        super.init(frame: .zero, style: .plain)
+        super.init(frame: .zero, style: .grouped)
         setupCollectionView()
     }
     
@@ -93,9 +97,18 @@ public class UIUnderlyingTableView: UITableView,
             }
         }
     }
+
+    public func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        buildHeaderView?(tableView, section)
+    }
+    
+    public func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        headerHeight?(tableView, section) ?? .leastNonzeroMagnitude
+    }
     
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+        self.didSelectRowAt?(tableView, indexPath)
     }
     
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {

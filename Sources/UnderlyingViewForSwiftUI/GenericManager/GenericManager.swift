@@ -13,20 +13,31 @@ public enum GenericScrollDirection {
     case down
 }
 
-public struct GenericSection: Identifiable, Equatable {
-    public static func == (lhs: GenericSection, rhs: GenericSection) -> Bool {
-        lhs.id == rhs.id
-    }
-    
-    public init( title: String, data: [Any]) {
-        self.title = title
-        self.data = data
-    }
-    
-    public var id: String {
+public protocol GenericSection: Identifiable, Equatable {
+    var title: String { get }
+    var data: [any Cell] { get set }
+}
+
+public extension GenericSection {
+    var id: String {
         return UUID().uuidString
     }
     
-    public let title: String
-    public var data: [Any]
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+public protocol Cell: Identifiable, Equatable {
+    
+}
+
+public extension Cell {
+    var id: String {
+        return UUID().uuidString
+    }
+    
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+    }
 }

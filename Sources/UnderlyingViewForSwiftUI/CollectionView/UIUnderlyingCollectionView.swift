@@ -8,7 +8,7 @@ public class UIUnderlyingCollectionView: UICollectionView,
                                          UIScrollViewDelegate {
     
     // MARK: - public
-    public var data: [GenericSection] = []
+    public var data: [any GenericSection] = []
     public var onRefresh: (() async -> Void)?
     public var onReachEnd: (() async -> Void)?
     public var calculateSizeForCell: ((UICollectionView, IndexPath) -> CGSize)?

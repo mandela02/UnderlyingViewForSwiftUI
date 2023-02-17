@@ -11,8 +11,10 @@ public typealias AsyncVoidCallback = () async -> Void
 
 public struct UnderlyingCollectionView: UIViewRepresentable {
     
-    public init(data: [GenericSection] = [],
+    public init(data: [any GenericSection] = [],
+                layout: UICollectionViewLayout? = nil,
                 scrollDirection: Binding<GenericScrollDirection> = .constant(.down),
+                reloadTrigger: Binding<Bool> = .constant(false),
                 onRefesh: AsyncVoidCallback? = nil,
                 onReachEnd: AsyncVoidCallback? = nil,
                 calculateSizeForCell: @escaping (UICollectionView, IndexPath) -> CGSize,
@@ -29,6 +31,7 @@ public struct UnderlyingCollectionView: UIViewRepresentable {
                 extraSetting: ((UICollectionView) -> Void)?) {
         
         self._scrollDirection = scrollDirection
+        self._reloadTrigger = reloadTrigger
         self.data = data
         self.onRefesh = onRefesh
         self.onReachEnd = onReachEnd
@@ -43,15 +46,20 @@ public struct UnderlyingCollectionView: UIViewRepresentable {
         self.spacing = spacing
         
         self.didSelectItem = didSelectItem
+        self.layout = layout
     }
     
     public typealias UIViewType = UIUnderlyingCollectionView
             
-    private let data: [GenericSection]
+    private let data: [any GenericSection]
+    private let layout: UICollectionViewLayout?
 
     @Binding
     private var scrollDirection: GenericScrollDirection
     
+    @Binding
+    private var reloadTrigger: Bool
+
     private let onRefesh: AsyncVoidCallback?
     private let onReachEnd: AsyncVoidCallback?
     private let extraSetting: ((UICollectionView) -> Void)?
@@ -92,7 +100,19 @@ public struct UnderlyingCollectionView: UIViewRepresentable {
     }
     
     public func updateUIView(_ uiView: UIViewType, context: Context) {
-        if data == uiView.data { return }
+        if reloadTrigger {
+            uiView.reloadData()
+            DispatchQueue.main.async {
+                reloadTrigger = false
+            }
+            return
+        }
+        
+        if data.elementsEqual(uiView.data,
+                              by: { section, element in
+            section.id == element.id
+        }) { return }
+
         uiView.data = data
         uiView.reloadData()
     }

@@ -17,7 +17,7 @@ public struct UnderlyingScrollView<Content: View>: UIViewControllerRepresentable
     private var content: () -> Content
     private var axis: DirectionX
     private var hideScrollIndicators: Bool
-    private let onRefresh: AsyncVoidCallback?
+    private let onRefresh: (() async -> Void)?
     private let onReachBottom: (() -> Void)?
     
     @Binding
@@ -26,7 +26,7 @@ public struct UnderlyingScrollView<Content: View>: UIViewControllerRepresentable
     public init(axis: DirectionX = .vertical,
                 hideScrollIndicators: Bool = false,
                 shouldScrollToBottom: Binding<Bool> = .constant(false),
-                onRefresh: AsyncVoidCallback? = nil,
+                onRefresh: (() async -> Void)? = nil,
                 onReachBottom: (() -> Void)? = nil,
                 @ViewBuilder content: @escaping () -> Content) {
         

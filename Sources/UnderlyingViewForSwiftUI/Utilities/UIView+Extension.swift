@@ -16,8 +16,4 @@ extension UIView {
             self.frame.size.height = newValue
         }
     }
-    
-    func removeAllSubviews() {
-        self.subviews.forEach({ $0.removeFromSuperview() })
-    }
 }
