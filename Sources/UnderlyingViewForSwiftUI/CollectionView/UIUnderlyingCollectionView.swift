@@ -42,7 +42,7 @@ public class UIUnderlyingCollectionView: UICollectionView,
     
     // MARK: - Init
     public init() {
-        super.init(frame: .zero, collectionViewLayout: self.layout)
+        super.init(frame: .infinite, collectionViewLayout: self.layout)
         setupCollectionView()
     }
     
