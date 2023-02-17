@@ -53,7 +53,6 @@ public class UIUnderlyingCollectionView: UICollectionView,
     
     // MARK: - Functions
     private func setupCollectionView() {
-        self.translatesAutoresizingMaskIntoConstraints = false
         self.backgroundColor = .clear
         self.delegate = self
         self.dataSource = self
