@@ -94,7 +94,9 @@ public struct UnderlyingCollectionView: UIViewRepresentable {
         collectionView.willDisplay = willDisplay
         collectionView.didEndDisplay = didEndDisplay
         collectionView.didSelectItem = didSelectItem
-        
+        collectionView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        collectionView.setContentHuggingPriority(.defaultLow, for: .vertical)
+
         extraSetting?(collectionView)
 
         return collectionView
